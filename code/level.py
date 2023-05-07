@@ -1,81 +1,29 @@
 from pygame import *
-from tiles import Tile
-from settings import tile_size,win_w
-from player import Player
+from settings import win_h, win_w
+from game_data import levels
+font.init()
+
 class Level:
-	def __init__(self, level_data, surface):
-		self.surface = surface
-		self.worldshift = 0
-		self.player = sprite.GroupSingle()
-		self.setup(level_data)
+	def __init__(self, current_level, surface, create_overworld):
 
-	def setup(self, layout):
-		self.tiles = sprite.Group()
-		for row_index,row in enumerate(layout):
-			for col_index,cell in enumerate(row):
-				x = col_index*tile_size
-				y = row_index	* tile_size	
-				if cell == 'X':
-					tile = Tile((x,y), tile_size)
-					self.tiles.add(tile)
-				if cell == "P":	
-					playerspr = Player((x,y))
-					self.player.add(playerspr)
+		self.display_surface = surface
+		self.current_level = current_level
+		level_data = levels[current_level]
+		level_content = level_data['content']
+		self.new_max_level = level_data['unlock']
+		self.create_overworld = create_overworld
 
-	def scroll_X(self):
-		player = self.player.sprite
-		player_x = player.rect.centerx
-		direction_x = player.direction.x
+		self.font = font.Font(None, 40)
+		self.text_surface = self.font.render(level_content, True, "white")
+		self.text_rect = self.text_surface.get_rect(center = (win_w/2, win_h/2))
 
-		if player_x < win_w/4 and direction_x<0:
-			self.worldshift = 8
-			player.speed = 0
-		elif player_x >win_w - (win_w/4) and direction_x>0:
-			self.worldshift = -8
-			player.speed = 0
-		else:
-			self.worldshift = 0
-			player.speed = 8
 
-	def hor_collide(self):
-		player = self.player.sprite
-
-		player.rect.x +=player.direction.x * player.speed
-
-		for sprite in self.tiles.sprites():
-			if sprite.rect.colliderect(player.rect):
-				if player.direction.x < 0:
-					player.rect.left = sprite.rect.right
-				elif player.direction.x > 0:
-					player.rect.right = sprite.rect.left
-	def ver_collide(self):
-		player = self.player.sprite
-		player.apply_gravity()
-		for sprite in self.tiles.sprites():
-			if sprite.rect.colliderect(player.rect):
-				if player.direction.y > 0:
-					player.rect.bottom = sprite.rect.top
-					player.direction.y = 0
-					player.on_ground = True
-				elif player.direction.y < 0:
-					player.rect.top = sprite.rect.bottom
-					player.direction.y = 0
-					player.on_ceiling = True
-		if player.on_ground and player.direction.y < 0 or player.direction.y >1:
-			player.on_ground = False
-		if player.on_ceiling and player.direction.y > 0:
-			player.on_ceiling= False
-
-					
-		
+	def input(self):
+		keys = key.get_pressed()
+		if keys[K_RETURN]:
+			self.create_overworld(self.current_level, self.new_max_level)
+		if keys[K_ESCAPE]:
+			self.create_overworld(self.current_level,0)
 	def run(self):
-
-		self.tiles.update(self.worldshift)
-		self.tiles.draw(self.surface)
-		self.scroll_X()
-
-		
-		self.player.update()
-		self.hor_collide()
-		self.ver_collide()
-		self.player.draw(self.surface)
+		self.input()
+		self.display_surface.blit(self.text_surface, self.text_rect)
